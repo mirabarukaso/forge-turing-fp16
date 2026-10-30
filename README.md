@@ -1,36 +1,34 @@
 # forge-turing-fp16
 
-Forge Neo 扩展。在不修改 Forge Neo 本体的情况下，给 Turing（sm75）提供两项开关：
+Forge Neo extension. It adds two switches for Turing (sm75) without modifying Forge Neo itself:
 
 - Diffusion compute in fp16
 - Cast attention q/k/v to fp16 for SageAttention
 
-SageAttention 2.2 post3 和 `triton<3.3` 不会由 WebUI 自动安装。用本仓库的安装脚本或手动步骤写入虚拟环境，并在启动参数里加上 `--skip-install`，避免下次启动把包装升回 post6 / Triton 3.3+。
+The WebUI does not install SageAttention 2.2 post3 or `triton<3.3`. Use the installer in this repository, or the manual steps, to put those packages in the virtualenv. Add `--skip-install` to the launch arguments so the next startup does not upgrade them to post6 or Triton 3.3+.
 
-## 装到哪里
+## Where to install
 
-别人从 GitHub 安装时，把本仓库克隆到 Forge Neo 的扩展目录：
+Clone this repository into the Forge Neo extensions directory:
 
 ```text
 extensions/forge-turing-fp16
 ```
 
-这台调试机器的仓库在 `W:\Github\forge-turing-fp16`，并用目录联接挂到当前工作区的 `extensions\forge-turing-fp16`。联接只存在于这台机器。
+## Documentation
 
-## 文档
+- [Windows installer](docs/install-windows.md)
+- [Linux installer](docs/install-linux.md)
+- [Windows manual steps](docs/manual-windows.md)
+- [Linux manual steps](docs/manual-linux.md)
+- [Windows tests](docs/testing-windows.md)
+- [Linux tests](docs/testing-linux.md)
 
-- [Windows 脚本安装](docs/install-windows.md)
-- [Linux 脚本安装](docs/install-linux.md)
-- [Windows 手动步骤](docs/manual-windows.md)
-- [Linux 手动步骤](docs/manual-linux.md)
-- [Windows 测试](docs/testing-windows.md)
-- [Linux 测试](docs/testing-linux.md)
+## Symbols to recheck after a Forge Neo update
 
-## 跟上 Forge Neo 之后要核对的符号
-
-扩展包装了这些入口。上游改了签名或改成按值导入时，包装会失效：
+The extension wraps these entry points. The wrappers stop matching upstream if a signature changes, or if a module imports the function by value:
 
 - `modules.sd_models.forge_model_reload`
-- `modules.processing.forge_model_reload`（`processing.py` 在文件开头按名字导入）
+- `modules.processing.forge_model_reload` (`processing.py` imports this name at the top of the file)
 - `backend.modules.k_model.KModel.apply_model`
-- `backend.attention.attention_sage` 和 `attention.attention_function`
+- `backend.attention.attention_sage` and `attention.attention_function`

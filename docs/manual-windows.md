@@ -1,16 +1,16 @@
-# Windows：不使用脚本的手动步骤
+# Windows: manual steps
 
-下面的命令都在 Forge Neo 根目录执行。把 `F:\sd-webui-forge-neo` 换成你的路径。Python 调用使用参数形式，不要把带 `<` 的包装名拼进 `cmd /c` 的一整行字符串。
+Run these commands from the Forge Neo root. Replace `F:\sd-webui-forge-neo` with that directory. Pass the package name as its own argument. Do not paste a requirement that contains `<` into one unquoted `cmd /c` string.
 
-## 1. 虚拟环境
+## 1. Virtualenv
 
-如果还没有 `venv\Scripts\python.exe`：
+If `venv\Scripts\python.exe` does not exist yet:
 
 ```bat
 python -m venv venv
 ```
 
-后文用：
+The rest of this page uses:
 
 ```bat
 set PY=F:\sd-webui-forge-neo\venv\Scripts\python.exe
@@ -18,43 +18,43 @@ set PY=F:\sd-webui-forge-neo\venv\Scripts\python.exe
 
 ## 2. PyTorch
 
-已经安装就不要重装。缺失时，与当前 Forge Neo 默认一致：
+Leave an existing torch install alone. If torch is missing, match the current Forge Neo default:
 
 ```bat
 "%PY%" -m pip install torch==2.14.0+cu130 torchvision==0.29.0+cu130 --extra-index-url https://download.pytorch.org/whl/cu130
 ```
 
-环境变量 `TORCH_COMMAND` 有值时，用那个命令代替上面这一行。
+If `TORCH_COMMAND` is set, use that command instead of the line above.
 
-## 3. 确认是 Turing
+## 3. Confirm the GPU is Turing
 
 ```bat
 "%PY%" -c "import torch; print(torch.cuda.get_device_capability(0))"
 ```
 
-输出必须是 `(7, 5)`。不是的话停在这里，不要改 Sage 和 Triton。
+The output must be `(7, 5)`. Otherwise stop here and do not change Sage or Triton.
 
-Turing 卡不是当前可见的第一块 GPU 时，先在同一个终端里执行 `set CUDA_VISIBLE_DEVICES=1`（换成实际编号），再做上面的探测和后面的安装。
+If the Turing card is not the first visible GPU, run `set CUDA_VISIBLE_DEVICES=1` in the same terminal (use the real index), then probe and install.
 
 ## 4. Triton
 
-在 **cmd.exe** 里，下面这一行是错的：
+This line is wrong in **cmd.exe**:
 
 ```bat
 "%PY%" -m pip install -U --no-deps triton-windows<3.3
 ```
 
-`<3.3` 会被当成“从文件 `3.3` 读入标准输入”，报 `The system cannot find the file specified.`
+`<3.3` is read as “take stdin from a file named `3.3`”, and cmd reports `The system cannot find the file specified.`
 
-用引号：
+Quote the requirement:
 
 ```bat
 "%PY%" -m pip install -U --no-deps "triton-windows<3.3"
 ```
 
-已经安装且版本低于 3.3 时，跳过这一步。
+Skip this step when `triton-windows` is already installed and older than 3.3.
 
-用 uv 时同样要带引号：
+uv needs the same quotes:
 
 ```bat
 uv pip install --python "%PY%" -U --no-deps "triton-windows<3.3"
@@ -62,7 +62,7 @@ uv pip install --python "%PY%" -U --no-deps "triton-windows<3.3"
 
 ## 5. SageAttention 2.2 post3
 
-按 torch 的 CUDA 选一个 wheel。`+cu130` 用最后一条。
+Pick the wheel that matches the torch CUDA build. Use the last URL for `+cu130`.
 
 ```text
 cu124  https://github.com/woct0rdho/SageAttention/releases/download/v2.2.0-windows.post3/sageattention-2.2.0+cu124torch2.5.1.post3-cp39-abi3-win_amd64.whl
@@ -75,48 +75,48 @@ cu130  https://github.com/woct0rdho/SageAttention/releases/download/v2.2.0-windo
 "%PY%" -m pip install -U --no-deps https://github.com/woct0rdho/SageAttention/releases/download/v2.2.0-windows.post3/sageattention-2.2.0+cu130torch2.9.0.post3-cp39-abi3-win_amd64.whl
 ```
 
-`pip show sageattention` 的版本里已经有 `post3` 时，跳过。
+Skip this step when `pip show sageattention` already contains `post3`.
 
 ## 6. xformers
 
-只在缺失时安装。索引跟上一步 torch 的 CUDA：
+Install only when it is missing. Use the same CUDA index as torch:
 
 ```bat
 "%PY%" -m pip install xformers==0.0.35 --extra-index-url https://download.pytorch.org/whl/cu130
 ```
 
-## 7. Sage 导入 stub
+## 7. Sage import stub
 
-把本仓库的 `installer\turing_sage_stub.py` 复制到：
+Copy `installer\turing_sage_stub.py` from this repository to:
 
 ```text
 venv\Lib\site-packages\turing_sage_stub.py
 ```
 
-在同一目录新建 `turing_sage_stub.pth`，内容只有一行：
+In that same directory, create `turing_sage_stub.pth` with one line:
 
 ```text
 import turing_sage_stub
 ```
 
-这个文件在解释器启动时挂上导入钩子。它不在启动瞬间导入 torch。只有 SageAttention 去加载 `_fused` 时才检查是不是 sm75；加载失败才换成空模块，让 fp16 Triton kernel 继续导入。其他 GPU 仍使用真实扩展。
+Python imports that file at startup and installs the hook. The hook does not import torch at startup. It checks for sm75 only when SageAttention loads `_fused`. A failed load is replaced with an empty module so the fp16 Triton kernels can import. Other GPUs still use the real extension.
 
-## 8. 启动参数
+## 8. Launch arguments
 
-`webui-user.bat`：
+`webui-user.bat`:
 
 ```bat
 set COMMANDLINE_ARGS=--api --sage --xformers --uv --pin-shared-memory --cuda-malloc --skip-install
 ```
 
-`--skip-install` 是为了阻止下次启动把 Sage 升到 post6、把 Triton 升到 3.3 以上。副作用是 `requirements.txt` 和扩展 `install.py` 也不再自动执行。需要时手动：
+`--skip-install` stops the next launch from upgrading Sage to post6 and Triton to 3.3 or newer. It also skips `requirements.txt` and extension `install.py`. When those are needed:
 
 ```bat
 "%PY%" -m pip install -r requirements.txt
 ```
 
-不要加 `-U`。`requirements.txt` 里没有 sage / triton。
+Do not add `-U`. `requirements.txt` does not pin sage or triton.
 
-## 9. 扩展
+## 9. Extension
 
-把本仓库放到 `extensions\forge-turing-fp16`，启动 `webui.bat`。设置页 Optimizations 里会出现两个开关。
+Put this repository in `extensions\forge-turing-fp16` and start `webui.bat`. The Optimizations settings page shows the two switches.
