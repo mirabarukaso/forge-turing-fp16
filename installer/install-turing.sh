@@ -50,12 +50,21 @@ FORGE_ROOT=$(cd "$FORGE_ROOT" && pwd)
 VENV_PYTHON="$FORGE_ROOT/venv/bin/python"
 
 if [[ ! -x "$VENV_PYTHON" ]]; then
-    if ! command -v python3 >/dev/null 2>&1; then
-        echo "python3 was not found on PATH, and venv/bin/python does not exist." >&2
-        exit 1
+    if [[ "$USE_UV" -eq 1 ]]; then
+        if ! command -v uv >/dev/null 2>&1; then
+            echo "uv was requested but was not found on PATH." >&2
+            exit 1
+        fi
+        echo "Creating uv venv at $FORGE_ROOT/venv (no pip module; later installs use uv pip --python)"
+        uv venv --python python3 "$FORGE_ROOT/venv"
+    else
+        if ! command -v python3 >/dev/null 2>&1; then
+            echo "python3 was not found on PATH, and venv/bin/python does not exist." >&2
+            exit 1
+        fi
+        echo "Creating venv at $FORGE_ROOT/venv"
+        python3 -m venv "$FORGE_ROOT/venv"
     fi
-    echo "Creating venv at $FORGE_ROOT/venv"
-    python3 -m venv "$FORGE_ROOT/venv"
 fi
 
 ARGS=("$INSTALLER_DIR/turing_install.py" --forge-root "$FORGE_ROOT")

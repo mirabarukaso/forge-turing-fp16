@@ -4,11 +4,13 @@ Run these commands from the Forge Neo root. Replace `F:\sd-webui-forge-neo` with
 
 ## 1. Virtualenv
 
-If `venv\Scripts\python.exe` does not exist yet:
+If `venv\Scripts\python.exe` does not exist yet, match Forge's `webui.bat`:
 
 ```bat
 python -m venv venv
 ```
+
+A folder created by `uv venv` is different. Its `pyvenv.cfg` contains `uv =`, and it has no pip module. Configure that environment with `uv pip install --python` and the virtualenv's `python.exe`. Do not run `python -m pip`. Forge's `--uv` startup flag only rewrites pip commands after `activate.bat` has set `VIRTUAL_ENV`. It does not add `--python` for you.
 
 The rest of this page uses:
 
@@ -16,12 +18,15 @@ The rest of this page uses:
 set PY=F:\sd-webui-forge-neo\venv\Scripts\python.exe
 ```
 
+Each install step shows two commands. Use `uv pip install --python` when `pyvenv.cfg` contains `uv =`. Use `"%PY%" -m pip` only when that virtualenv has a pip module.
+
 ## 2. PyTorch
 
 Leave an existing torch install alone. If torch is missing, match the current Forge Neo default:
 
 ```bat
 "%PY%" -m pip install torch==2.14.0+cu130 torchvision==0.29.0+cu130 --extra-index-url https://download.pytorch.org/whl/cu130
+uv pip install --python "%PY%" torch==2.14.0+cu130 torchvision==0.29.0+cu130 --extra-index-url https://download.pytorch.org/whl/cu130
 ```
 
 If `TORCH_COMMAND` is set, use that command instead of the line above.
@@ -73,9 +78,14 @@ cu130  https://github.com/woct0rdho/SageAttention/releases/download/v2.2.0-windo
 
 ```bat
 "%PY%" -m pip install -U --no-deps https://github.com/woct0rdho/SageAttention/releases/download/v2.2.0-windows.post3/sageattention-2.2.0+cu130torch2.9.0.post3-cp39-abi3-win_amd64.whl
+uv pip install --python "%PY%" -U --no-deps https://github.com/woct0rdho/SageAttention/releases/download/v2.2.0-windows.post3/sageattention-2.2.0+cu130torch2.9.0.post3-cp39-abi3-win_amd64.whl
 ```
 
-Skip this step when `pip show sageattention` already contains `post3`.
+Skip this step when the installed version string already contains `post3`:
+
+```bat
+"%PY%" -c "import importlib.metadata as m; print(m.version('sageattention'))"
+```
 
 ## 6. xformers
 
@@ -83,6 +93,7 @@ Install only when it is missing. Use the same CUDA index as torch:
 
 ```bat
 "%PY%" -m pip install xformers==0.0.35 --extra-index-url https://download.pytorch.org/whl/cu130
+uv pip install --python "%PY%" xformers==0.0.35 --extra-index-url https://download.pytorch.org/whl/cu130
 ```
 
 ## 7. Sage import stub
@@ -113,10 +124,19 @@ set COMMANDLINE_ARGS=--api --sage --xformers --uv --pin-shared-memory --cuda-mal
 
 ```bat
 "%PY%" -m pip install -r requirements.txt
+uv pip install --python "%PY%" -r requirements.txt
 ```
 
-Do not add `-U`. `requirements.txt` does not pin sage or triton.
+Do not add `-U`. `requirements.txt` does not pin sage or triton. Extension `install.py` still does not run. For a Forge upgrade, use [upgrade.md](upgrade.md) instead of this line alone.
 
 ## 9. Extension
 
-Put this repository in `extensions\forge-turing-fp16` and start `webui.bat`. The Optimizations settings page shows the two switches.
+Use Forge's Install from URL with `https://github.com/mirabarukaso/forge-turing-fp16`. Leave the branch and the local directory name empty, then apply and restart. The folder is `extensions\forge-turing-fp16`.
+
+Or, from the Forge Neo root:
+
+```bat
+git clone https://github.com/mirabarukaso/forge-turing-fp16.git extensions\forge-turing-fp16
+```
+
+Or copy this repository into that folder. Start `webui.bat`. The Optimizations settings page shows the two switches.

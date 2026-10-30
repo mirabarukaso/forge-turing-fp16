@@ -4,10 +4,14 @@ Run these commands from the Forge Neo root. Replace `/path/to/forge-neo` with th
 
 ## 1. Virtualenv
 
+Match Forge's `webui.sh` when the virtualenv does not exist yet:
+
 ```bash
 python3 -m venv venv
 PY=/path/to/forge-neo/venv/bin/python
 ```
+
+A directory created by `uv venv` has `uv =` in `pyvenv.cfg` and no pip module. Each install step shows two commands. Use `uv pip install --python "$PY"` when that line is present. Use `"$PY" -m pip` only when the virtualenv has a pip module. Forge's `--uv` flag rewrites pip only after the virtualenv is activated. It does not pass `--python`.
 
 ## 2. PyTorch
 
@@ -15,6 +19,7 @@ Leave an existing torch install alone. If torch is missing, use Forge Neo's `TOR
 
 ```bash
 "$PY" -m pip install torch==2.14.0+cu130 torchvision==0.29.0+cu130 --extra-index-url https://download.pytorch.org/whl/cu130
+uv pip install --python "$PY" torch==2.14.0+cu130 torchvision==0.29.0+cu130 --extra-index-url https://download.pytorch.org/whl/cu130
 ```
 
 ## 3. Confirm the GPU is Turing
@@ -55,9 +60,14 @@ Linux does not use the Windows post3 wheel. Install 2.2.0 from PyPI:
 
 ```bash
 "$PY" -m pip install -U --no-deps "sageattention==2.2.0"
+uv pip install --python "$PY" -U --no-deps "sageattention==2.2.0"
 ```
 
-Skip this step when `pip show sageattention` is already 2.2.0.
+Skip this step when the installed version is already 2.2.0:
+
+```bash
+"$PY" -c "import importlib.metadata as m; print(m.version('sageattention'))"
+```
 
 ## 6. xformers
 
@@ -65,6 +75,7 @@ Install only when it is missing. Use the same CUDA index as torch:
 
 ```bash
 "$PY" -m pip install xformers==0.0.35 --extra-index-url https://download.pytorch.org/whl/cu130
+uv pip install --python "$PY" xformers==0.0.35 --extra-index-url https://download.pytorch.org/whl/cu130
 ```
 
 ## 7. Sage import stub
@@ -95,10 +106,19 @@ export COMMANDLINE_ARGS="--api --sage --xformers --uv --pin-shared-memory --cuda
 
 ```bash
 "$PY" -m pip install -r requirements.txt
+uv pip install --python "$PY" -r requirements.txt
 ```
 
-Do not add `-U`.
+Do not add `-U`. Extension `install.py` still does not run. For a Forge upgrade, use [upgrade.md](upgrade.md) instead of this line alone.
 
 ## 9. Extension
 
-Put this repository in `extensions/forge-turing-fp16` and start `webui.sh`. The Optimizations settings page shows the two switches.
+Use Forge's Install from URL with `https://github.com/mirabarukaso/forge-turing-fp16`. Leave the branch and the local directory name empty, then apply and restart. The folder is `extensions/forge-turing-fp16`.
+
+Or, from the Forge Neo root:
+
+```bash
+git clone https://github.com/mirabarukaso/forge-turing-fp16.git extensions/forge-turing-fp16
+```
+
+Or copy this repository into that folder. Start `webui.sh`. The Optimizations settings page shows the two switches.

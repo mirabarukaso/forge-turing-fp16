@@ -75,11 +75,49 @@ def _run(command: list[str]) -> None:
     subprocess.run(command, check=True)
 
 
+def _pyvenv_created_by_uv() -> bool:
+    """uv venv writes `uv = <version>` into pyvenv.cfg and does not install pip."""
+    cfg = Path(sys.prefix) / "pyvenv.cfg"
+    if not cfg.is_file():
+        return False
+    for line in cfg.read_text(encoding="utf-8", errors="replace").splitlines():
+        key, sep, _value = line.partition("=")
+        if sep and key.strip() == "uv":
+            return True
+    return False
+
+
+def _pip_importable() -> bool:
+    return importlib.util.find_spec("pip") is not None
+
+
+def _resolve_use_uv(requested: bool) -> bool:
+    """Forge's --uv flag rewrites `python -m pip` into `uv pip` after activate.bat sets VIRTUAL_ENV.
+
+    This installer runs outside that process, so a uv-created venv must be targeted with
+    `uv pip install --python <venv python>`. `python -m pip` cannot run there.
+    """
+    created_by_uv = _pyvenv_created_by_uv()
+    pip_ok = _pip_importable()
+    use_uv = requested or created_by_uv or not pip_ok
+    if not use_uv:
+        return False
+    if not requested:
+        if created_by_uv:
+            print("pyvenv.cfg was written by uv. Using uv pip --python for this venv.")
+        else:
+            print("pip is not importable in this venv. Using uv pip --python.")
+    if shutil.which("uv") is None:
+        raise SystemExit("uv is required for this venv but was not found on PATH.")
+    return True
+
+
 def _pip(args: list[str], use_uv: bool) -> None:
+    """args are the arguments after `pip install`, not including the install subcommand."""
     if use_uv:
         uv = shutil.which("uv")
         if uv is None:
-            raise SystemExit("uv was requested but was not found on PATH. Re-run without --uv.")
+            raise SystemExit("uv is required for this venv but was not found on PATH.")
         _run([uv, "pip", "install", "--python", sys.executable, *args])
         return
     _run([sys.executable, "-m", "pip", "install", *args])
@@ -132,7 +170,7 @@ def _install_triton(use_uv: bool) -> None:
         print(f"{package} is missing")
     else:
         print(f"{package} {current} is 3.3 or newer; replacing it")
-    _pip(["install", "-U", "--no-deps", spec], use_uv)
+    _pip(["-U", "--no-deps", spec], use_uv)
 
 
 def _install_sage(use_uv: bool) -> None:
@@ -151,7 +189,7 @@ def _install_sage(use_uv: bool) -> None:
             print(f"sageattention {current} is already 2.2.0")
             return
         print("Installing sageattention==2.2.0")
-    _pip(["install", "-U", "--no-deps", spec], use_uv)
+    _pip(["-U", "--no-deps", spec], use_uv)
 
 
 def _install_xformers(use_uv: bool) -> None:
@@ -159,14 +197,14 @@ def _install_xformers(use_uv: bool) -> None:
         print(f"xformers {_dist_version('xformers')} is already installed")
         return
     index = os.environ.get("TORCH_INDEX_URL", f"https://download.pytorch.org/whl/{_cuda_tag()}")
-    _pip(["install", DEFAULT_XFORMERS, "--extra-index-url", index], use_uv)
+    _pip([DEFAULT_XFORMERS, "--extra-index-url", index], use_uv)
 
 
 def _install_requirements(forge_root: Path, use_uv: bool) -> None:
     requirements = forge_root / "requirements.txt"
     if not requirements.is_file():
         raise SystemExit(f"requirements.txt was not found at {requirements}")
-    _pip(["install", "-r", str(requirements)], use_uv)
+    _pip(["-r", str(requirements)], use_uv)
 
 
 def _install_stub() -> None:
@@ -198,21 +236,23 @@ def main() -> int:
         os.environ["CUDA_VISIBLE_DEVICES"] = str(args.device_id)
         print(f"CUDA_VISIBLE_DEVICES={args.device_id}")
 
+    use_uv = _resolve_use_uv(args.uv)
+
     if not _installed("torch"):
         print("torch is missing; installing the Forge Neo default build")
-        _pip(["install", *_torch_args()], args.uv)
+        _pip(_torch_args(), use_uv)
 
     capability = _capability()
     if capability != (7, 5):
         print(f"This installer only changes Sage, Triton, xformers, and the import stub on sm75. Detected {capability}.")
         return 1
 
-    _install_triton(args.uv)
-    _install_sage(args.uv)
-    _install_xformers(args.uv)
+    _install_triton(use_uv)
+    _install_sage(use_uv)
+    _install_xformers(use_uv)
     _install_stub()
     if args.requirements:
-        _install_requirements(forge_root, args.uv)
+        _install_requirements(forge_root, use_uv)
 
     print("sageattention", _dist_version("sageattention"))
     print("triton", _dist_version("triton-windows", "triton"))

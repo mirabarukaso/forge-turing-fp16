@@ -4,11 +4,16 @@ Use this after the Forge Neo directory can create a `venv`. The script passes ar
 
 ## 1. Place the extension
 
+Use Forge's Install from URL. The repository URL is `https://github.com/mirabarukaso/forge-turing-fp16`. Leave the branch and the local directory name empty. Forge clones it to `extensions/forge-turing-fp16`. Apply and restart from the Installed tab. This does not install the Turing packages. Continue with the steps below.
+
+To clone by hand, from the Forge Neo root:
+
 ```bash
-cd /path/to/forge-neo/extensions
-git clone https://github.com/mirabarukaso/forge-turing-fp16.git
-chmod +x forge-turing-fp16/installer/install-turing.sh
+git clone https://github.com/mirabarukaso/forge-turing-fp16.git extensions/forge-turing-fp16
+chmod +x extensions/forge-turing-fp16/installer/install-turing.sh extensions/forge-turing-fp16/installer/upgrade-forge.sh
 ```
+
+Or copy this repository to `/path/to/forge-neo/extensions/forge-turing-fp16`, then `chmod +x` the two shell scripts. A copy without a `.git` directory cannot be updated from the Extensions tab.
 
 ## 2. Turn off automatic WebUI installs
 
@@ -20,7 +25,7 @@ export COMMANDLINE_ARGS="--api --sage --xformers --uv --pin-shared-memory --cuda
 
 Do not add `--reinstall-torch`. `--skip-install` skips Sage, Triton, xformers, `requirements.txt`, and extension `install.py`. Forge still installs torch when torch is missing, or when `--reinstall-torch` is set.
 
-After a Forge Neo upgrade, pass `--requirements` to this script when dependencies need to be installed.
+After a Forge Neo upgrade, `requirements.txt` and extension `install.py` will not run automatically either. Use [the upgrade steps](upgrade.md). `--requirements` on this installer only installs `requirements.txt`. It does not run extension `install.py`.
 
 ## 3. Run the script
 
@@ -28,7 +33,9 @@ After a Forge Neo upgrade, pass `--requirements` to this script when dependencie
 ./installer/install-turing.sh --forge-root /path/to/forge-neo --uv
 ```
 
-`--forge-root` can be omitted when the extension already lives in `extensions/forge-turing-fp16`. Omit `--uv` when uv is not installed.
+`--forge-root` can be omitted when the extension already lives in `extensions/forge-turing-fp16`. Pass `--uv` when the WebUI is started with `--uv`, or when the virtualenv should be created with `uv venv`. Omit `--uv` when creating a normal virtualenv and uv is not installed.
+
+If `venv/pyvenv.cfg` already contains a line `uv =`, the installer uses `uv pip install --python <venv python>` even without `--uv`. That virtualenv has no pip module. Forge's `--uv` flag does not create the virtualenv. It rewrites `pip` into `uv pip` after `webui.sh` activates the virtualenv. This installer always passes `--python`.
 
 Optional arguments:
 
@@ -40,8 +47,10 @@ If the detected compute capability is not 7.5, the script exits and does not cha
 ## 4. Check
 
 ```bash
-/path/to/forge-neo/venv/bin/python -m pip show sageattention triton xformers
+/path/to/forge-neo/venv/bin/python -c "import importlib.metadata as m; print(m.version('sageattention')); print(m.version('triton')); print(m.version('xformers'))"
 ```
+
+Do not use `python -m pip show` on a virtualenv whose `pyvenv.cfg` contains `uv =`.
 
 Expected:
 
@@ -49,8 +58,11 @@ Expected:
 - `triton` is older than 3.3.
 - `venv/lib/pythonX.Y/site-packages/turing_sage_stub.pth` exists.
 
-Start `webui.sh`. When the CUDA extension fails to load and Triton is used instead, the log contains:
+Start `webui.sh`. If WebUI was already running, restart it. The stub is loaded only when Python starts. A Triton fallback logs both of these lines:
 
 ```text
 SageAttention CUDA extension unavailable; using Triton kernels
+Using SageAttention 2
 ```
+
+If the CUDA extension itself loads, the first line is absent and `Using SageAttention 2` is still the success line. `Using xformers Cross Attention` means Sage did not import.

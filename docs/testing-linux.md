@@ -7,12 +7,15 @@ Before starting, confirm `COMMANDLINE_ARGS` in `webui-user.sh` contains `--sage 
 ## Packages
 
 ```bash
-venv/bin/python -m pip show sageattention triton
+venv/bin/python -c "import importlib.metadata as m; print(m.version('sageattention')); print(m.version('triton'))"
 ```
+
+Do not use `python -m pip show` when `venv/pyvenv.cfg` contains `uv =`.
 
 - `sageattention` is 2.2.0, and a restart does not replace it with a newer build.
 - `triton` is older than 3.3. The package is not `triton-windows`.
-- When the CUDA extension fails to load, the startup log contains `using Triton kernels`. That line is absent when the extension loads.
+- `venv/lib/pythonX.Y/site-packages/turing_sage_stub.pth` exists.
+- When the CUDA extension fails to load, the startup log contains `using Triton kernels` and `Using SageAttention 2`. The first line is absent when the extension loads. `Using xformers Cross Attention` means Sage did not import.
 
 Run the Triton install from the manual page in bash. `"triton<3.3"` must be quoted so the shell does not try to read a file named `3.3`.
 

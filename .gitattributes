@@ -1,3 +1,4 @@
 *.sh text eol=lf
 installer/turing_install.py text eol=lf
+installer/forge_plan.py text eol=lf
 installer/turing_sage_stub.py text eol=lf

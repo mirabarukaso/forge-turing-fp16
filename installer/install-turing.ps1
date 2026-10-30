@@ -25,12 +25,22 @@ $ForgeRoot = (Resolve-Path $ForgeRoot).Path
 $VenvPython = Join-Path $ForgeRoot "venv\Scripts\python.exe"
 
 if (-not (Test-Path $VenvPython)) {
-    $BasePython = (Get-Command python -ErrorAction SilentlyContinue).Source
-    if (-not $BasePython) {
-        Write-Error "python was not found on PATH, and venv\Scripts\python.exe does not exist."
+    $VenvDir = Join-Path $ForgeRoot "venv"
+    if ($UseUv) {
+        $Uv = (Get-Command uv -ErrorAction SilentlyContinue).Source
+        if (-not $Uv) {
+            Write-Error "uv was requested but was not found on PATH."
+        }
+        Write-Host "Creating uv venv at $VenvDir (no pip module; later installs use uv pip --python)"
+        & $Uv venv --python python $VenvDir
+    } else {
+        $BasePython = (Get-Command python -ErrorAction SilentlyContinue).Source
+        if (-not $BasePython) {
+            Write-Error "python was not found on PATH, and venv\Scripts\python.exe does not exist."
+        }
+        Write-Host "Creating venv at $VenvDir"
+        & $BasePython -m venv $VenvDir
     }
-    Write-Host "Creating venv at $ForgeRoot\venv"
-    & $BasePython -m venv (Join-Path $ForgeRoot "venv")
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
     }

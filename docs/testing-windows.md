@@ -7,12 +7,15 @@ Before starting, confirm `webui-user.bat` contains `--sage --skip-install` and d
 ## Packages
 
 ```bat
-venv\Scripts\python.exe -m pip show sageattention triton-windows
+venv\Scripts\python.exe -c "import importlib.metadata as m; print(m.version('sageattention')); print(m.version('triton-windows'))"
 ```
+
+Do not use `python -m pip show` when `venv\pyvenv.cfg` contains `uv =`.
 
 - `sageattention` contains `post3`, and a WebUI restart does not replace it with post6.
 - `triton-windows` is older than 3.3.
-- When the CUDA extension fails to load, the startup log contains `using Triton kernels`. That line is absent when the extension loads.
+- `venv\Lib\site-packages\turing_sage_stub.pth` exists.
+- When the CUDA extension fails to load, the startup log contains `using Triton kernels` and `Using SageAttention 2`. The first line is absent when the extension loads. `Using xformers Cross Attention` means Sage did not import.
 
 Run the Triton install from the manual page in cmd without uv. The quoted command must not report that the file `3.3` cannot be found.
 
