@@ -56,7 +56,7 @@ Outside that process, install with `uv pip install --python <venv python>`. Keep
 
 Do not add a plugin flag that calls unload again. `forge_model_reload` already calls `unload_all_models()` and `soft_empty_cache()`. The smaller weight budget after fp16 turns off comes from `KModel.memory_required`, which scales with `computation_dtype`. Another empty_cache does not change that reservation.
 
-The frontend can drop weights left between requests. Read [vram-api.md](vram-api.md) and give that sequence to the frontend. Do not add a new unload endpoint in this extension.
+The frontend can drop weights left between requests. Read [docs/api-vram.md](../../../docs/api-vram.md) and give that sequence to the frontend. Do not add a new unload endpoint in this extension. Compare the last request that was sent, not the options restored afterward. Unload when a switch goes from on to off, or when the checkpoint or additional modules change. Skip a switch that goes from off to on.
 
 ## Upgrade Forge Neo
 

@@ -85,7 +85,7 @@ In the WebUI: Settings, Optimizations.
 
 Both start off. Turning one on patches the model that is already loaded. Turning it off does not convert that model back. The next generation reloads the checkpoint.
 
-An API client can send either key inside `override_settings` on `txt2img` or `img2img`. `override_settings_restore_afterwards: true` restores the saved options after that request. It does not unload weights. A frontend that changes the checkpoint or turns these switches off should `POST /sdapi/v1/unload-checkpoint` after the previous job is idle. The sequence is in [the frontend note](.cursor/skills/forge-turing-ops/vram-api.md).
+An API client can send either key inside `override_settings` on `txt2img`. `override_settings_restore_afterwards: true` restores the saved options after that request. It does not unload weights. Unload only when a switch goes from on to off, or when the checkpoint or additional modules change. The sequence is in [API VRAM](docs/api-vram.md).
 
 ### 6. Upgrade Forge later
 
@@ -116,6 +116,7 @@ Details: [Upgrade Forge Neo](docs/upgrade.md).
 - [Windows tests](docs/testing-windows.md)
 - [Linux tests](docs/testing-linux.md)
 - [Upgrade](docs/upgrade.md)
+- [API VRAM](docs/api-vram.md)
 
 Agents that diagnose Sage, uv, or a Forge upgrade should follow [.cursor/skills/forge-turing-ops/SKILL.md](.cursor/skills/forge-turing-ops/SKILL.md).
 
